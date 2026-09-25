@@ -15,10 +15,16 @@ CREATE TABLE IF NOT EXISTS case_tickets(case_ticket_id TEXT PRIMARY KEY,case_rec
 CREATE TABLE IF NOT EXISTS response_resources(response_resource_id TEXT PRIMARY KEY,kind TEXT NOT NULL,district TEXT NOT NULL,capacity INTEGER NOT NULL,available INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS allocations(plan_id TEXT PRIMARY KEY,response_resource_id TEXT NOT NULL,case_ticket_id TEXT NOT NULL,quantity INTEGER NOT NULL,created_at TEXT NOT NULL,UNIQUE(response_resource_id,case_ticket_id));
 CREATE TABLE IF NOT EXISTS audit_events(event_id INTEGER PRIMARY KEY AUTOINCREMENT,entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,action TEXT NOT NULL,actor TEXT NOT NULL,payload TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS drivers(driver_id TEXT PRIMARY KEY,license_no TEXT NOT NULL,anchor_date TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS point_events(event_seq INTEGER PRIMARY KEY AUTOINCREMENT,event_id TEXT NOT NULL UNIQUE,driver_id TEXT NOT NULL REFERENCES drivers(driver_id),event_type TEXT NOT NULL,points INTEGER NOT NULL,effective_at TEXT NOT NULL,rule_version TEXT,decision_no TEXT,violation_code TEXT,link_event_id TEXT,is_derived INTEGER NOT NULL DEFAULT 0,reason TEXT,recorded_at TEXT NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_point_events_penalty_decision ON point_events(driver_id,decision_no) WHERE event_type='penalty';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_point_events_link ON point_events(driver_id,link_event_id,event_type) WHERE link_event_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS measures(measure_key TEXT PRIMARY KEY,driver_id TEXT NOT NULL REFERENCES drivers(driver_id),kind TEXT NOT NULL,threshold INTEGER NOT NULL,trigger_event_id TEXT NOT NULL,triggered_at TEXT NOT NULL,cycle_start TEXT NOT NULL,status TEXT NOT NULL,executed_at TEXT,completed_at TEXT,retracted_at TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_measures_driver ON measures(driver_id);
 """
 def utcnow() -> str: return datetime.now(timezone.utc).isoformat()
 def connect(path: str = ":memory:") -> sqlite3.Connection:
-    db=sqlite3.connect(path,timeout=10); db.row_factory=sqlite3.Row; db.execute("PRAGMA foreign_keys=ON"); db.execute("PRAGMA journal_mode=WAL"); db.executescript(SCHEMA); db.commit(); return db
+    db=sqlite3.connect(path,timeout=10,check_same_thread=False); db.row_factory=sqlite3.Row; db.execute("PRAGMA foreign_keys=ON"); db.execute("PRAGMA journal_mode=WAL"); db.executescript(SCHEMA); db.commit(); return db
 @contextmanager
 def transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     try: db.execute("BEGIN IMMEDIATE"); yield db; db.commit()

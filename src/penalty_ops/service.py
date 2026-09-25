@@ -2,11 +2,15 @@
 from __future__ import annotations
 import hashlib,uuid
 from .auth import Auth
+from .clock import SystemClock
 from .models import ViolationRecord,CaseRecord,as_dict,utcnow
+from .points import PointsLedger
 from .risk import violation_probability,score_violation_record
 from .storage import audit,connect,rows,transaction
 class PenaltyService:
-    def __init__(self,database=":memory:"): self.db=connect(database); self.auth=Auth(self.db)
+    def __init__(self,database=":memory:",clock=None):
+        self.db=connect(database); self.auth=Auth(self.db); self.clock=clock or SystemClock()
+        self.points_ledger=PointsLedger(self.db,self.auth,clock=self.clock)
     def bootstrap(self):
         for uid,pwd,role in (("admin","enforcement-admin","admin"),("operator","enforcement-operator","operator")):
             try:self.auth.create_user(uid,pwd,role)

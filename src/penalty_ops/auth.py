@@ -4,7 +4,7 @@ import hashlib,hmac,secrets,sqlite3
 from dataclasses import dataclass
 from datetime import datetime,timezone
 from .storage import utcnow
-PERMISSIONS={"viewer":{"read"},"operator":{"read","measure","case_ticket","allocate"},"engineer":{"read","measure","case_ticket","allocate","analyze"},"quality":{"read","measure","case_ticket","allocate","analyze","approve"},"admin":{"read","measure","case_ticket","allocate","analyze","approve","admin"}}
+PERMISSIONS={"viewer":{"read"},"operator":{"read","measure","case_ticket","allocate","points"},"engineer":{"read","measure","case_ticket","allocate","points","analyze"},"quality":{"read","measure","case_ticket","allocate","analyze","approve","points","appeal"},"admin":{"read","measure","case_ticket","allocate","analyze","approve","admin","points","appeal"}}
 @dataclass(frozen=True)
 class Principal: user_id: str; role: str
 def _digest(password,salt): return hashlib.pbkdf2_hmac("sha256",password.encode(),salt.encode(),70000).hex()
